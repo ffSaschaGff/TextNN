@@ -7,6 +7,7 @@ import java.util.Set;
 public class DictonaryBilder {
 
     private SQLConnector sqlConnector;
+    public static final int COUNT_WORD_TO_ADD = 2;
 
     public DictonaryBilder(SQLConnector sqlConnector) {
         this.sqlConnector = sqlConnector;
@@ -69,22 +70,24 @@ public class DictonaryBilder {
 
         sqlConnector.execute(sql);
 
-        /*/Удаляем те, что реже 3 раз
-        sql = new ArrayList<>();
-        sql.add("delete from "+SQLConnector.TABLE_DICTONARY+" where ID in (select UNIGRAMM_ID from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " group by UNIGRAMM_ID having count(TEXT_ID) < 3)");
-        sql.add("delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM+" where UNIGRAMM_ID not in (select ID from "+SQLConnector.TABLE_DICTONARY+")");
-        sqlConnector.execute(sql);
+        //Удаляем те, что реже 3 раз
+        if (COUNT_WORD_TO_ADD > 1) {
+            sql = new ArrayList<>();
+            sql.add("delete from " + SQLConnector.TABLE_DICTONARY + " where ID in (select UNIGRAMM_ID from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " group by UNIGRAMM_ID having count(TEXT_ID) < "+COUNT_WORD_TO_ADD+")");
+            sql.add("delete from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " where UNIGRAMM_ID not in (select ID from " + SQLConnector.TABLE_DICTONARY + ")");
+            sqlConnector.execute(sql);
 
-        //перенумеруем
-        resultSet = sqlConnector.getResult("select ID from "+SQLConnector.TABLE_DICTONARY+" order by ID");
-        sql = new ArrayList<>();
-        i = 1;
-        while (resultSet.next()) {
-            sql.add("UPDATE "+SQLConnector.TABLE_DICTONARY+" SET ID="+i+" WHERE ID="+resultSet.getInt("ID"));
-            sql.add("UPDATE "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM+" SET UNIGRAMM_ID="+i+" WHERE UNIGRAMM_ID="+resultSet.getInt("ID"));
-            i++;
+            //перенумеруем
+            resultSet = sqlConnector.getResult("select ID from " + SQLConnector.TABLE_DICTONARY + " order by ID");
+            sql = new ArrayList<>();
+            i = 1;
+            while (resultSet.next()) {
+                sql.add("UPDATE " + SQLConnector.TABLE_DICTONARY + " SET ID=" + i + " WHERE ID=" + resultSet.getInt("ID"));
+                sql.add("UPDATE " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " SET UNIGRAMM_ID=" + i + " WHERE UNIGRAMM_ID=" + resultSet.getInt("ID"));
+                i++;
+            }
+            sqlConnector.execute(sql);
         }
-        sqlConnector.execute(sql);*/
     }
 
 }

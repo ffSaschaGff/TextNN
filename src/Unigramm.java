@@ -27,7 +27,7 @@ class Unigramm {
             }
         }
 
-        uniqueValues.removeIf(s -> s.equals(""));
+        uniqueValues.removeIf(s -> s.equals("") || s.length() == 1);
 
         return uniqueValues;
     }
