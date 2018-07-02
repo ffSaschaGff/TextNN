@@ -19,9 +19,10 @@ public class MainFrame extends JFrame {
     WebServer webServer;
     SQLConnector sqlConnector;
     NeuralNetwork neuralNetwork;
+    Thread learningThread;
 
     //гуи
-    JButton recalsDictonaryButton, learnButton, saveButton, loadButton;
+    JButton learnButton, stopLearnButton, saveButton, loadButton;
     JPanel nnPanel, saveLoadPanel;
 
 
@@ -58,12 +59,14 @@ public class MainFrame extends JFrame {
 
         nnPanel = new JPanel();
         nnPanel.setLayout(new BoxLayout(nnPanel, BoxLayout.X_AXIS));
-        recalsDictonaryButton = new JButton("Пересчитать");
-        recalsDictonaryButton.addActionListener(new MainFrameActionLisner());
+
         learnButton = new JButton("Обучить");
         learnButton.addActionListener(new MainFrameActionLisner());
-        nnPanel.add(recalsDictonaryButton);
+        stopLearnButton = new JButton("Остановить");
+        stopLearnButton.addActionListener(new MainFrameActionLisner());
+
         nnPanel.add(learnButton);
+        nnPanel.add(stopLearnButton);
         this.getRootPane().add(nnPanel);
 
         saveLoadPanel = new JPanel();
@@ -118,16 +121,26 @@ public class MainFrame extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
             JButton source = (JButton) e.getSource();
-            if (source == recalsDictonaryButton) {
-                DictonaryBilder dictonaryBilder = new DictonaryBilder(sqlConnector);
-                try {
-                    dictonaryBilder.rebildDictonary();
-                    createNN();
-                } catch (SQLException e1) {
-                    e1.printStackTrace();
-                }
-            } else if (source == learnButton) {
-                teachNN();
+            if (source == learnButton) {
+                learningThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        webServer.setNnInCalculation(true);
+                        DictonaryBilder dictonaryBilder = new DictonaryBilder(sqlConnector);
+                        try {
+                            dictonaryBilder.rebildDictonary();
+                            createNN();
+                            teachNN();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        } finally {
+                            webServer.setNnInCalculation(false);
+                        }
+                    }
+                });
+                learningThread.start();
+            } else if (source == stopLearnButton) {
+                neuralNetwork.stopLearning();
             } else if (source == saveButton) {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showSaveDialog(null);

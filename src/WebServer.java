@@ -14,13 +14,23 @@ public class WebServer {
     private HttpServer httpServer;
     private volatile SQLConnector sqlConnector;
     private NeuralNetwork neuralNetwork;
+    private volatile boolean nnInCalculation;
 
     public WebServer(SQLConnector sqlConnector, NeuralNetwork neuralNetwork) throws IOException {
+        this.nnInCalculation = false;
         this.sqlConnector = sqlConnector;
         this.neuralNetwork = neuralNetwork;
         httpServer = HttpServer.create(new InetSocketAddress(8080),0);
         httpServer.createContext("/api", new WebHandler());
         httpServer.setExecutor(null);
+    }
+
+    public void setNnInCalculation(boolean nnInCalculation) {
+        this.nnInCalculation = nnInCalculation;
+    }
+
+    public boolean isNnInCalculation() {
+        return nnInCalculation;
     }
 
     public void start() {
@@ -38,7 +48,9 @@ public class WebServer {
             Object[] input = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
                     .lines().toArray();//collect(Collectors.joining("\n"));
             String url = exchange.getRequestURI().toString();
-            if (url.equals("/api/test")) {
+            if (isNnInCalculation()) {
+                send400err(exchange, new Exception("Расчет нейросети в процессе"));
+            }else if (url.equals("/api/test")) {
                 //тестируем
                 String response = "ok";
                 exchange.sendResponseHeaders(200, response.length());
