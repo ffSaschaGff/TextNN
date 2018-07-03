@@ -1,4 +1,3 @@
-import org.h2.util.IOUtils;
 import org.neuroph.core.NeuralNetwork;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
@@ -7,27 +6,30 @@ import org.neuroph.util.TransferFunctionType;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.stream.Stream;
 
-public class MainFrame extends JFrame {
+class MainFrame extends JFrame {
 
-    WebServer webServer;
-    SQLConnector sqlConnector;
-    NeuralNetwork neuralNetwork;
-    Thread learningThread;
+    private WebServer webServer;
+    private SQLConnector sqlConnector;
+    private NeuralNetwork neuralNetwork;
+    private Thread learningThread;
 
     //гуи
-    JButton learnButton, stopLearnButton, saveButton, loadButton;
-    JPanel nnPanel, saveLoadPanel;
+    private JButton learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton;
+    private JPanel nnPanel, saveLoadPanel, sqlPanel;
+    private JLabel learnInfo;
 
 
 
-    public MainFrame() {
+    MainFrame() {
         this.setSize(400,300);
         this.setDefaultCloseOperation(EXIT_ON_CLOSE);
         createGUI();
@@ -57,6 +59,17 @@ public class MainFrame extends JFrame {
     private void createGUI() {
         this.getRootPane().setLayout(new BoxLayout(this.getRootPane(), BoxLayout.Y_AXIS));
 
+        sqlPanel = new JPanel();
+        sqlPanel.setLayout(new BoxLayout(sqlPanel, BoxLayout.X_AXIS));
+
+        loadLearningSetButton = new JButton("Загрузить в БД");
+        loadLearningSetButton.addActionListener(new MainFrameActionLisner());
+        clearSQLButton = new JButton("Очистить БД");
+        clearSQLButton.addActionListener(new MainFrameActionLisner());
+        sqlPanel.add(loadLearningSetButton);
+        sqlPanel.add(clearSQLButton);
+        this.getRootPane().add(sqlPanel);
+
         nnPanel = new JPanel();
         nnPanel.setLayout(new BoxLayout(nnPanel, BoxLayout.X_AXIS));
 
@@ -64,9 +77,11 @@ public class MainFrame extends JFrame {
         learnButton.addActionListener(new MainFrameActionLisner());
         stopLearnButton = new JButton("Остановить");
         stopLearnButton.addActionListener(new MainFrameActionLisner());
+        learnInfo = new JLabel("");
 
         nnPanel.add(learnButton);
         nnPanel.add(stopLearnButton);
+        nnPanel.add(learnInfo);
         this.getRootPane().add(nnPanel);
 
         saveLoadPanel = new JPanel();
@@ -76,6 +91,14 @@ public class MainFrame extends JFrame {
         saveLoadPanel.add(saveButton);
         saveLoadPanel.add(loadButton);
         this.getRootPane().add(saveLoadPanel);
+
+        this.getRootPane().setAlignmentY(JFrame.TOP_ALIGNMENT);
+        nnPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
+        nnPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
+        saveLoadPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
+        saveLoadPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
+        sqlPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
+        sqlPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
     }
 
     private void createWebServer() {
@@ -116,31 +139,50 @@ public class MainFrame extends JFrame {
         }
     }
 
+    void readAndLoadToSQL(File file) {
+        ArrayList<String> sql = new ArrayList<>();
+        try (Stream<String> stream = Files.lines( Paths.get(file.getAbsolutePath()), StandardCharsets.UTF_8))
+        {
+            stream.forEach(s -> {
+                String[] line = s.split(";");
+                if (line.length < 2) {
+                    throw new IllegalArgumentException("Строка меньше двух колонок");
+                }
+                sql.add("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+line[1]+",'"+line[0]+"')");
+            });
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     class MainFrameActionLisner implements ActionListener {
 
         @Override
         public void actionPerformed(ActionEvent e) {
             JButton source = (JButton) e.getSource();
             if (source == learnButton) {
-                learningThread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        webServer.setNnInCalculation(true);
-                        DictonaryBilder dictonaryBilder = new DictonaryBilder(sqlConnector);
-                        try {
-                            dictonaryBilder.rebildDictonary();
-                            createNN();
-                            teachNN();
-                        } catch (SQLException e1) {
-                            e1.printStackTrace();
-                        } finally {
-                            webServer.setNnInCalculation(false);
-                        }
+                learningThread = new Thread(() -> {
+                    webServer.setNnInCalculation(true);
+                    DictonaryBilder dictonaryBilder = new DictonaryBilder(sqlConnector);
+                    try {
+                        learnInfo.setText("rebild DB");
+                        dictonaryBilder.rebildDictonary();
+                        createNN();
+                        learnInfo.setText("teach NN");
+                        teachNN();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    } finally {
+                        learnInfo.setText("learning stopped");
+                        webServer.setNnInCalculation(false);
                     }
                 });
                 learningThread.start();
             } else if (source == stopLearnButton) {
                 neuralNetwork.stopLearning();
+                learnInfo.setText("learning stopped");
             } else if (source == saveButton) {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showSaveDialog(null);
@@ -152,10 +194,26 @@ public class MainFrame extends JFrame {
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     try {
-                        neuralNetwork = NeuralNetwork.load((InputStream) new FileInputStream(chooser.getSelectedFile()));
+                        neuralNetwork = NeuralNetwork.load(new FileInputStream(chooser.getSelectedFile()));
                     } catch (FileNotFoundException e1) {
                         e1.printStackTrace();
                     }
+                }
+            } else if (source == clearSQLButton) {
+                String[] sql = {"delete from "+SQLConnector.TABLE_DICTONARY,
+                                "delete from "+SQLConnector.TABLE_SOURCES,
+                                "delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM,
+                                "delete from "+SQLConnector.TABLE_CLASES};
+                try {
+                    sqlConnector.execute(sql);
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+            } else if (source == loadLearningSetButton) {
+                JFileChooser chooser = new JFileChooser();
+                int ret = chooser.showOpenDialog(null);
+                if (ret == JFileChooser.APPROVE_OPTION) {
+                    readAndLoadToSQL(chooser.getSelectedFile());
                 }
             }
         }

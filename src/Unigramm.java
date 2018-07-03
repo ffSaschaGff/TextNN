@@ -5,7 +5,7 @@ import java.util.Set;
 
 class Unigramm {
 
-    public Set<String> getNGram(ArrayList<String> texts) {
+    Set<String> getNGram(ArrayList<String> texts) {
         // get all significant words
         if (texts == null) {
             throw new IllegalArgumentException();
@@ -32,7 +32,7 @@ class Unigramm {
         return uniqueValues;
     }
 
-    public Set<String> getNGram(String text) {
+    Set<String> getNGram(String text) {
         // get all significant words
         String[] words = clean(text).split("[ \n\t\r$+<>№=]");
 

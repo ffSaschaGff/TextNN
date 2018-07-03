@@ -3,16 +3,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Set;
 
-public class DictonaryBilder {
+class DictonaryBilder {
 
     private SQLConnector sqlConnector;
     public static final int COUNT_WORD_TO_ADD = 2;
 
-    public DictonaryBilder(SQLConnector sqlConnector) {
+    DictonaryBilder(SQLConnector sqlConnector) {
         this.sqlConnector = sqlConnector;
     }
 
-    public void rebildDictonary() throws SQLException {
+    void rebildDictonary() throws SQLException {
         clearExistingData();
         createDictonary();
     }
@@ -34,12 +34,12 @@ public class DictonaryBilder {
         }
         Unigramm unigramm = new Unigramm();
         Set<String> dictonary = unigramm.getNGram(input);
-        ArrayList<String> sql = new ArrayList();
+        ArrayList<String> sql = new ArrayList<>();
         int i = 0;
 
         for(String word: dictonary) {
             StringBuilder stringBuilder = new StringBuilder();
-            sql.add(stringBuilder.append("insert into ").append(SQLConnector.TABLE_DICTONARY).append(" values (").append(String.valueOf(i+1)).append(",'").append(word+"')").toString());
+            sql.add(stringBuilder.append("insert into ").append(SQLConnector.TABLE_DICTONARY).append(" values (").append(String.valueOf(i+1)).append(",'").append(word).append("')").toString());
 
             i++;
         }
@@ -47,11 +47,11 @@ public class DictonaryBilder {
         sqlConnector.execute(sql);
 
         //Заполняем тексты в униграммах
-        sql = new ArrayList();
+        sql = new ArrayList<>();
         resultSet.beforeFirst();
         while (resultSet.next()) {
             StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("INSERT INTO "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM+" SELECT "+resultSet.getInt("ID") + " as TEXT_ID , ID as UNIGRAMM_ID FROM "+SQLConnector.TABLE_DICTONARY + " where VALUE in (");
+            stringBuilder.append("INSERT INTO ").append(SQLConnector.TABLE_SOURCES_IN_UNIGRAM).append(" SELECT ").append(resultSet.getInt("ID")).append(" as TEXT_ID , ID as UNIGRAMM_ID FROM ").append(SQLConnector.TABLE_DICTONARY).append(" where VALUE in (");
 
             boolean isFirst = true;
             Set<String> currentWords = unigramm.getNGram(resultSet.getString("SAMPLE"));

@@ -9,14 +9,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
-public class WebServer {
+class WebServer {
 
     private HttpServer httpServer;
     private volatile SQLConnector sqlConnector;
     private NeuralNetwork neuralNetwork;
     private volatile boolean nnInCalculation;
 
-    public WebServer(SQLConnector sqlConnector, NeuralNetwork neuralNetwork) throws IOException {
+    WebServer(SQLConnector sqlConnector, NeuralNetwork neuralNetwork) throws IOException {
         this.nnInCalculation = false;
         this.sqlConnector = sqlConnector;
         this.neuralNetwork = neuralNetwork;
@@ -25,19 +25,19 @@ public class WebServer {
         httpServer.setExecutor(null);
     }
 
-    public void setNnInCalculation(boolean nnInCalculation) {
+    void setNnInCalculation(boolean nnInCalculation) {
         this.nnInCalculation = nnInCalculation;
     }
 
-    public boolean isNnInCalculation() {
+    boolean isNnInCalculation() {
         return nnInCalculation;
     }
 
-    public void start() {
+    void start() {
         httpServer.start();
     }
 
-    public void stop() {
+    void stop() {
         httpServer.stop(0);
     }
 
