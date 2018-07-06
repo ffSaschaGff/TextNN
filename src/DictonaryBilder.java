@@ -6,7 +6,7 @@ import java.util.Set;
 class DictonaryBilder {
 
     private SQLConnector sqlConnector;
-    public static final int COUNT_WORD_TO_ADD = 2;
+    public static final int COUNT_WORD_TO_ADD = 1;
 
     DictonaryBilder(SQLConnector sqlConnector) {
         this.sqlConnector = sqlConnector;

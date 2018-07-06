@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 class WebServer {
 
@@ -45,8 +46,10 @@ class WebServer {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            Object[] input = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
-                    .lines().toArray();//collect(Collectors.joining("\n"));
+
+             String raw =  new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
+                    .lines().collect(Collectors.joining("\n")).replace('\'','\"');
+            String[] input = raw.split("\n");
             String url = exchange.getRequestURI().toString();
             if (isNnInCalculation()) {
                 send400err(exchange, new Exception("Расчет нейросети в процессе"));

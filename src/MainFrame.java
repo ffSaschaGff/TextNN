@@ -2,18 +2,16 @@ import org.neuroph.core.NeuralNetwork;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
 import org.neuroph.util.TransferFunctionType;
-
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.stream.Stream;
+import java.util.List;
 
 class MainFrame extends JFrame {
 
@@ -88,6 +86,8 @@ class MainFrame extends JFrame {
         saveLoadPanel.setLayout(new BoxLayout(saveLoadPanel, BoxLayout.X_AXIS));
         saveButton = new JButton("Сохранить");
         loadButton = new JButton("Загрузить");
+        loadButton.addActionListener(new MainFrameActionLisner());
+        saveButton.addActionListener(new MainFrameActionLisner());
         saveLoadPanel.add(saveButton);
         saveLoadPanel.add(loadButton);
         this.getRootPane().add(saveLoadPanel);
@@ -141,18 +141,22 @@ class MainFrame extends JFrame {
 
     void readAndLoadToSQL(File file) {
         ArrayList<String> sql = new ArrayList<>();
-        try (Stream<String> stream = Files.lines( Paths.get(file.getAbsolutePath()), StandardCharsets.UTF_8))
-        {
-            stream.forEach(s -> {
-                String[] line = s.split(";");
-                if (line.length < 2) {
-                    throw new IllegalArgumentException("Строка меньше двух колонок");
+        try {
+
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_16);
+
+
+            for (int i = 0; i < lines.size(); i++) {
+                String[] line = lines.get(i).split(";");
+                if (line.length == 2) {
+                    sql.add("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+line[1]+",'"+line[0]+"')");
                 }
-                sql.add("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+line[1]+",'"+line[0]+"')");
-            });
-        }
-        catch (IOException e)
-        {
+
+            }
+            sqlConnector.execute(sql);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -202,8 +206,8 @@ class MainFrame extends JFrame {
             } else if (source == clearSQLButton) {
                 String[] sql = {"delete from "+SQLConnector.TABLE_DICTONARY,
                                 "delete from "+SQLConnector.TABLE_SOURCES,
-                                "delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM,
-                                "delete from "+SQLConnector.TABLE_CLASES};
+                                "delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM};//,
+                                //"delete from "+SQLConnector.TABLE_CLASES};
                 try {
                     sqlConnector.execute(sql);
                 } catch (SQLException e1) {
