@@ -14,7 +14,7 @@ class WebServer {
 
     private HttpServer httpServer;
     private volatile SQLConnector sqlConnector;
-    private NeuralNetwork neuralNetwork;
+    private volatile NeuralNetwork neuralNetwork;
     private volatile boolean nnInCalculation;
 
     WebServer(SQLConnector sqlConnector, NeuralNetwork neuralNetwork) throws IOException {
@@ -143,5 +143,9 @@ class WebServer {
         } catch (IOException e1) {
             e1.printStackTrace();
         }
+    }
+
+    public void setNeuralNetwork(NeuralNetwork neuralNetwork) {
+        this.neuralNetwork = neuralNetwork;
     }
 }

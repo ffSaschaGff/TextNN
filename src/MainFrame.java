@@ -1,6 +1,7 @@
 import org.neuroph.core.NeuralNetwork;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
+import org.neuroph.nnet.learning.MomentumBackpropagation;
 import org.neuroph.util.TransferFunctionType;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -46,7 +47,7 @@ class MainFrame extends JFrame {
                 lauers[0] = resultSet.getInt("ID");
             }
             lauers[2] = SQLConnector.COUNT_OF_CLASES;
-            lauers[1] = (lauers[0]+lauers[2])/2;
+            lauers[1] = 2*lauers[0]/3;
             neuralNetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, lauers);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -127,13 +128,27 @@ class MainFrame extends JFrame {
                 double[] input = new double[neuralNetwork.getInputsCount()];
                 double[] output = new double[neuralNetwork.getOutputsCount()];
                 output[outputSet.getInt("CLASS_ID")-1] = 1;
-                ResultSet inputSet = sqlConnector.getResult("select * from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " where TEXT_ID = " + outputSet.getInt("CLASS_ID"));
+                ResultSet inputSet = sqlConnector.getResult("select * from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " where TEXT_ID = " + outputSet.getInt("ID"));
                 while (inputSet.next()) {
                     input[inputSet.getInt("UNIGRAMM_ID")-1] = 1;
                 }
                 dataSet.addRow(input, output);
             }
+            neuralNetwork.randomizeWeights();
+
+            /*MomentumBackpropagation learningRule = new MomentumBackpropagation();
+            learningRule.setLearningRate(0.2);
+            learningRule.setMomentum(0.2);
+
+            learningRule.setMaxError(0.01);
+            learningRule.setNeuralNetwork(neuralNetwork);
+
+            learningRule.setTrainingSet(dataSet);
+            learningRule.setMaxIterations(1000000);
+
+            learningRule.learn(dataSet);*/
             neuralNetwork.learn(dataSet);
+            webServer.setNeuralNetwork(neuralNetwork);
         } catch (SQLException e) {
             e.printStackTrace();
         }
