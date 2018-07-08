@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 class MainFrame extends JFrame {
 
@@ -22,9 +23,10 @@ class MainFrame extends JFrame {
     private Thread learningThread;
 
     //гуи
-    private JButton learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton;
-    private JPanel nnPanel, saveLoadPanel, sqlPanel;
+    private JButton learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton, getClassButton;
+    private JPanel nnPanel, saveLoadPanel, sqlPanel, getClassPanel;
     private JLabel learnInfo;
+    private JTextField sampelField;
 
 
 
@@ -92,6 +94,15 @@ class MainFrame extends JFrame {
         saveLoadPanel.add(saveButton);
         saveLoadPanel.add(loadButton);
         this.getRootPane().add(saveLoadPanel);
+
+        getClassPanel = new JPanel();
+        getClassPanel.setLayout(new BoxLayout(getClassPanel, BoxLayout.X_AXIS));
+        sampelField = new JTextField("Введите для распознования");
+        getClassPanel.add(sampelField);
+        getClassButton = new JButton("Получить класс");
+        getClassButton.addActionListener(new MainFrameActionLisner());
+        getClassPanel.add(getClassButton);
+        this.getRootPane().add(getClassPanel);
 
         this.getRootPane().setAlignmentY(JFrame.TOP_ALIGNMENT);
         nnPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
@@ -233,6 +244,43 @@ class MainFrame extends JFrame {
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     readAndLoadToSQL(chooser.getSelectedFile());
+                }
+            } else if (source == getClassButton) {
+                try {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    Unigramm unigramm = new Unigramm();
+                    Set<String> wordsSet = unigramm.getNGram((String) sampelField.getText());
+                    stringBuilder.append("select ID from " + SQLConnector.TABLE_DICTONARY + " where VALUE in (");
+                    boolean isFirst = true;
+                    for (String word : wordsSet) {
+                        if (isFirst) {
+                            isFirst = !isFirst;
+                        } else {
+                            stringBuilder.append(",");
+                        }
+                        stringBuilder.append("'" + word + "'");
+                    }
+                    stringBuilder.append(")");
+                    ResultSet resultSet = null;
+                    resultSet = sqlConnector.getResult(stringBuilder.toString());
+
+                    double[] inputNeuro = new double[neuralNetwork.getInputsCount()];
+                    while (resultSet.next()) {
+                        inputNeuro[resultSet.getInt("ID") - 1] = 1;
+                    }
+                    neuralNetwork.setInput(inputNeuro);
+                    neuralNetwork.calculate();
+                    double[] outputNeuro = neuralNetwork.getOutput();
+                    StringBuilder response = new StringBuilder();
+                    for (int i = 0; i < outputNeuro.length; i++) {
+                        response.append(String.valueOf(i + 1)).append(":").append(String.valueOf(outputNeuro[i]));
+                        if (i != outputNeuro.length - 1) {
+                            response.append(System.lineSeparator());
+                        }
+                    }
+                    JOptionPane.showMessageDialog(null, response.toString());
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
                 }
             }
         }
