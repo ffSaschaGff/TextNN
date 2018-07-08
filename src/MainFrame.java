@@ -47,7 +47,7 @@ class MainFrame extends JFrame {
                 lauers[0] = resultSet.getInt("ID");
             }
             lauers[2] = SQLConnector.COUNT_OF_CLASES;
-            lauers[1] = 2*lauers[0]/3;
+            lauers[1] = lauers[0]/3;
             neuralNetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, lauers);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -134,19 +134,18 @@ class MainFrame extends JFrame {
                 }
                 dataSet.addRow(input, output);
             }
-            neuralNetwork.randomizeWeights();
 
-            /*MomentumBackpropagation learningRule = new MomentumBackpropagation();
+            MomentumBackpropagation learningRule = new MomentumBackpropagation();
             learningRule.setLearningRate(0.2);
-            learningRule.setMomentum(0.2);
+            learningRule.setMomentum(0.3);
 
             learningRule.setMaxError(0.01);
             learningRule.setNeuralNetwork(neuralNetwork);
 
             learningRule.setTrainingSet(dataSet);
-            learningRule.setMaxIterations(1000000);
+            learningRule.setMaxIterations(10_000_000);
 
-            learningRule.learn(dataSet);*/
+            learningRule.learn(dataSet);
             neuralNetwork.learn(dataSet);
             webServer.setNeuralNetwork(neuralNetwork);
         } catch (SQLException e) {
@@ -214,6 +213,7 @@ class MainFrame extends JFrame {
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     try {
                         neuralNetwork = NeuralNetwork.load(new FileInputStream(chooser.getSelectedFile()));
+                        webServer.setNeuralNetwork(neuralNetwork);
                     } catch (FileNotFoundException e1) {
                         e1.printStackTrace();
                     }
