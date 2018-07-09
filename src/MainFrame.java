@@ -1,7 +1,5 @@
 import org.neuroph.core.NeuralNetwork;
-import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
-import org.neuroph.nnet.learning.MomentumBackpropagation;
 import org.neuroph.util.TransferFunctionType;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -47,7 +45,7 @@ class MainFrame extends JFrame {
             }
             lauers[2] = SQLConnector.COUNT_OF_CLASES;
             lauers[1] = lauers[0]/3;
-            FirstClass.neuralNetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, lauers);
+            FirstClass.setNeuralNetwork(new MultiLayerPerceptron(TransferFunctionType.SIGMOID, lauers));
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -129,55 +127,25 @@ class MainFrame extends JFrame {
     }
 
     private void teachNN() {
-        DataSet dataSet = new DataSet(FirstClass.neuralNetwork.getInputsCount(), FirstClass.neuralNetwork.getOutputsCount());
-        try {
-            ResultSet outputSet = FirstClass.sqlConnector.getResult("select ID, CLASS_ID from " + SQLConnector.TABLE_SOURCES);
-            while (outputSet.next()) {
-                double[] input = new double[FirstClass.neuralNetwork.getInputsCount()];
-                double[] output = new double[FirstClass.neuralNetwork.getOutputsCount()];
-                output[outputSet.getInt("CLASS_ID")-1] = 1;
-                ResultSet inputSet = FirstClass.sqlConnector.getResult("select * from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " where TEXT_ID = " + outputSet.getInt("ID"));
-                while (inputSet.next()) {
-                    input[inputSet.getInt("UNIGRAMM_ID")-1] = 1;
-                }
-                dataSet.addRow(input, output);
-            }
-
-            MomentumBackpropagation learningRule = new MomentumBackpropagation();
-            learningRule.setLearningRate(0.2);
-            learningRule.setMomentum(0.3);
-
-            learningRule.setMaxError(0.01);
-            learningRule.setNeuralNetwork(FirstClass.neuralNetwork);
-
-            learningRule.setTrainingSet(dataSet);
-            learningRule.setMaxIterations(10_000_000);
-
-            learningRule.learn(dataSet);
-            FirstClass.neuralNetwork.learn(dataSet);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        FirstClass.teachNN();
     }
 
-    void readAndLoadToSQL(File file) {
+    private void readAndLoadToSQL(File file) {
         ArrayList<String> sql = new ArrayList<>();
         try {
 
             List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_16);
 
 
-            for (int i = 0; i < lines.size(); i++) {
-                String[] line = lines.get(i).split(";");
+            for (String line1 : lines) {
+                String[] line = line1.split(";");
                 if (line.length == 2) {
-                    sql.add("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+line[1]+",'"+line[0]+"')");
+                    sql.add("INSERT INTO " + SQLConnector.TABLE_SOURCES + " VALUES (null," + line[1] + ",'" + line[0] + "')");
                 }
 
             }
             FirstClass.sqlConnector.execute(sql);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (SQLException | IOException e) {
             e.printStackTrace();
         }
     }
@@ -206,20 +174,20 @@ class MainFrame extends JFrame {
                 });
                 learningThread.start();
             } else if (source == stopLearnButton) {
-                FirstClass.neuralNetwork.stopLearning();
+                FirstClass.stopLearning();
                 learnInfo.setText("learning stopped");
             } else if (source == saveButton) {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showSaveDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
-                    FirstClass.neuralNetwork.save(chooser.getSelectedFile().getAbsolutePath());
+                    FirstClass.getNeuralNetwork().save(chooser.getSelectedFile().getAbsolutePath());
                 }
             } else if (source == loadButton) {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     try {
-                        FirstClass.neuralNetwork = NeuralNetwork.load(new FileInputStream(chooser.getSelectedFile()));
+                        FirstClass.setNeuralNetwork(NeuralNetwork.load(new FileInputStream(chooser.getSelectedFile())));
                     } catch (FileNotFoundException e1) {
                         e1.printStackTrace();
                     }
@@ -259,13 +227,14 @@ class MainFrame extends JFrame {
                     ResultSet resultSet = null;
                     resultSet = FirstClass.sqlConnector.getResult(stringBuilder.toString());
 
-                    double[] inputNeuro = new double[FirstClass.neuralNetwork.getInputsCount()];
+                    NeuralNetwork neuralNetwork = FirstClass.getNeuralNetwork();
+                    double[] inputNeuro = new double[neuralNetwork.getInputsCount()];
                     while (resultSet.next()) {
                         inputNeuro[resultSet.getInt("ID") - 1] = 1;
                     }
-                    FirstClass.neuralNetwork.setInput(inputNeuro);
-                    FirstClass.neuralNetwork.calculate();
-                    double[] outputNeuro = FirstClass.neuralNetwork.getOutput();
+                    neuralNetwork.setInput(inputNeuro);
+                    neuralNetwork.calculate();
+                    double[] outputNeuro = neuralNetwork.getOutput();
                     StringBuilder response = new StringBuilder();
                     for (int i = 0; i < outputNeuro.length; i++) {
                         response.append(String.valueOf(i + 1)).append(":").append(String.valueOf(outputNeuro[i]));

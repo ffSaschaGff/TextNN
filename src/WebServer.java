@@ -98,13 +98,14 @@ class WebServer {
                     }
                     stringBuilder.append(")");
                     ResultSet resultSet = FirstClass.sqlConnector.getResult(stringBuilder.toString());
-                    double[] inputNeuro = new double[FirstClass.neuralNetwork.getInputsCount()];
+                    NeuralNetwork neuralNetwork = FirstClass.getNeuralNetwork();
+                    double[] inputNeuro = new double[neuralNetwork.getInputsCount()];
                     while (resultSet.next()) {
                         inputNeuro[resultSet.getInt("ID") - 1] = 1;
                     }
-                    FirstClass.neuralNetwork.setInput(inputNeuro);
-                    FirstClass.neuralNetwork.calculate();
-                    double[] outputNeuro = FirstClass.neuralNetwork.getOutput();
+                    neuralNetwork.setInput(inputNeuro);
+                    neuralNetwork.calculate();
+                    double[] outputNeuro = neuralNetwork.getOutput();
                     StringBuilder response = new StringBuilder();
                     for (int i = 0; i < outputNeuro.length; i++) {
                         response.append(String.valueOf(i + 1)).append(":").append(String.valueOf(outputNeuro[i]));
