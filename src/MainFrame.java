@@ -17,9 +17,6 @@ import java.util.Set;
 
 class MainFrame extends JFrame {
 
-    private WebServer webServer;
-    private SQLConnector sqlConnector;
-    private NeuralNetwork neuralNetwork;
     private Thread learningThread;
 
     //гуи
@@ -44,13 +41,13 @@ class MainFrame extends JFrame {
     private void createNN() {
         int[] lauers = new int[3];
         try {
-            ResultSet resultSet = sqlConnector.getResult("select count(ID) as ID from "+SQLConnector.TABLE_DICTONARY);
+            ResultSet resultSet = FirstClass.sqlConnector.getResult("select count(ID) as ID from "+SQLConnector.TABLE_DICTONARY);
             if (resultSet.next()) {
                 lauers[0] = resultSet.getInt("ID");
             }
             lauers[2] = SQLConnector.COUNT_OF_CLASES;
             lauers[1] = lauers[0]/3;
-            neuralNetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, lauers);
+            FirstClass.neuralNetwork = new MultiLayerPerceptron(TransferFunctionType.SIGMOID, lauers);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -115,8 +112,8 @@ class MainFrame extends JFrame {
 
     private void createWebServer() {
         try {
-            webServer = new WebServer(sqlConnector, neuralNetwork);
-            webServer.start();
+            FirstClass.webServer = new WebServer();
+            FirstClass.webServer.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -124,22 +121,22 @@ class MainFrame extends JFrame {
 
     private void createConnector() {
         try {
-            sqlConnector = new SQLConnector();
-            sqlConnector.initSQL();
+            FirstClass.sqlConnector = new SQLConnector();
+            FirstClass.sqlConnector.initSQL();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     private void teachNN() {
-        DataSet dataSet = new DataSet(neuralNetwork.getInputsCount(), neuralNetwork.getOutputsCount());
+        DataSet dataSet = new DataSet(FirstClass.neuralNetwork.getInputsCount(), FirstClass.neuralNetwork.getOutputsCount());
         try {
-            ResultSet outputSet = sqlConnector.getResult("select ID, CLASS_ID from " + SQLConnector.TABLE_SOURCES);
+            ResultSet outputSet = FirstClass.sqlConnector.getResult("select ID, CLASS_ID from " + SQLConnector.TABLE_SOURCES);
             while (outputSet.next()) {
-                double[] input = new double[neuralNetwork.getInputsCount()];
-                double[] output = new double[neuralNetwork.getOutputsCount()];
+                double[] input = new double[FirstClass.neuralNetwork.getInputsCount()];
+                double[] output = new double[FirstClass.neuralNetwork.getOutputsCount()];
                 output[outputSet.getInt("CLASS_ID")-1] = 1;
-                ResultSet inputSet = sqlConnector.getResult("select * from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " where TEXT_ID = " + outputSet.getInt("ID"));
+                ResultSet inputSet = FirstClass.sqlConnector.getResult("select * from " + SQLConnector.TABLE_SOURCES_IN_UNIGRAM + " where TEXT_ID = " + outputSet.getInt("ID"));
                 while (inputSet.next()) {
                     input[inputSet.getInt("UNIGRAMM_ID")-1] = 1;
                 }
@@ -151,14 +148,13 @@ class MainFrame extends JFrame {
             learningRule.setMomentum(0.3);
 
             learningRule.setMaxError(0.01);
-            learningRule.setNeuralNetwork(neuralNetwork);
+            learningRule.setNeuralNetwork(FirstClass.neuralNetwork);
 
             learningRule.setTrainingSet(dataSet);
             learningRule.setMaxIterations(10_000_000);
 
             learningRule.learn(dataSet);
-            neuralNetwork.learn(dataSet);
-            webServer.setNeuralNetwork(neuralNetwork);
+            FirstClass.neuralNetwork.learn(dataSet);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -178,7 +174,7 @@ class MainFrame extends JFrame {
                 }
 
             }
-            sqlConnector.execute(sql);
+            FirstClass.sqlConnector.execute(sql);
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -193,8 +189,8 @@ class MainFrame extends JFrame {
             JButton source = (JButton) e.getSource();
             if (source == learnButton) {
                 learningThread = new Thread(() -> {
-                    webServer.setNnInCalculation(true);
-                    DictonaryBilder dictonaryBilder = new DictonaryBilder(sqlConnector);
+                    FirstClass.webServer.setNnInCalculation(true);
+                    DictonaryBilder dictonaryBilder = new DictonaryBilder(FirstClass.sqlConnector);
                     try {
                         learnInfo.setText("rebild DB");
                         dictonaryBilder.rebildDictonary();
@@ -205,26 +201,25 @@ class MainFrame extends JFrame {
                         e1.printStackTrace();
                     } finally {
                         learnInfo.setText("learning stopped");
-                        webServer.setNnInCalculation(false);
+                        FirstClass.webServer.setNnInCalculation(false);
                     }
                 });
                 learningThread.start();
             } else if (source == stopLearnButton) {
-                neuralNetwork.stopLearning();
+                FirstClass.neuralNetwork.stopLearning();
                 learnInfo.setText("learning stopped");
             } else if (source == saveButton) {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showSaveDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
-                    neuralNetwork.save(chooser.getSelectedFile().getAbsolutePath());
+                    FirstClass.neuralNetwork.save(chooser.getSelectedFile().getAbsolutePath());
                 }
             } else if (source == loadButton) {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     try {
-                        neuralNetwork = NeuralNetwork.load(new FileInputStream(chooser.getSelectedFile()));
-                        webServer.setNeuralNetwork(neuralNetwork);
+                        FirstClass.neuralNetwork = NeuralNetwork.load(new FileInputStream(chooser.getSelectedFile()));
                     } catch (FileNotFoundException e1) {
                         e1.printStackTrace();
                     }
@@ -235,7 +230,7 @@ class MainFrame extends JFrame {
                                 "delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM};//,
                                 //"delete from "+SQLConnector.TABLE_CLASES};
                 try {
-                    sqlConnector.execute(sql);
+                    FirstClass.sqlConnector.execute(sql);
                 } catch (SQLException e1) {
                     e1.printStackTrace();
                 }
@@ -262,15 +257,15 @@ class MainFrame extends JFrame {
                     }
                     stringBuilder.append(")");
                     ResultSet resultSet = null;
-                    resultSet = sqlConnector.getResult(stringBuilder.toString());
+                    resultSet = FirstClass.sqlConnector.getResult(stringBuilder.toString());
 
-                    double[] inputNeuro = new double[neuralNetwork.getInputsCount()];
+                    double[] inputNeuro = new double[FirstClass.neuralNetwork.getInputsCount()];
                     while (resultSet.next()) {
                         inputNeuro[resultSet.getInt("ID") - 1] = 1;
                     }
-                    neuralNetwork.setInput(inputNeuro);
-                    neuralNetwork.calculate();
-                    double[] outputNeuro = neuralNetwork.getOutput();
+                    FirstClass.neuralNetwork.setInput(inputNeuro);
+                    FirstClass.neuralNetwork.calculate();
+                    double[] outputNeuro = FirstClass.neuralNetwork.getOutput();
                     StringBuilder response = new StringBuilder();
                     for (int i = 0; i < outputNeuro.length; i++) {
                         response.append(String.valueOf(i + 1)).append(":").append(String.valueOf(outputNeuro[i]));

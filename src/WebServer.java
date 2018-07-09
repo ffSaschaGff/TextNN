@@ -13,14 +13,10 @@ import java.util.stream.Collectors;
 class WebServer {
 
     private HttpServer httpServer;
-    private volatile SQLConnector sqlConnector;
-    private volatile NeuralNetwork neuralNetwork;
     private volatile boolean nnInCalculation;
 
-    WebServer(SQLConnector sqlConnector, NeuralNetwork neuralNetwork) throws IOException {
+    WebServer() throws IOException {
         this.nnInCalculation = false;
-        this.sqlConnector = sqlConnector;
-        this.neuralNetwork = neuralNetwork;
         httpServer = HttpServer.create(new InetSocketAddress(8080),0);
         httpServer.createContext("/api", new WebHandler());
         httpServer.setExecutor(null);
@@ -67,9 +63,9 @@ class WebServer {
                     if (input.length != 2) {
                         send400err(exchange, new Exception("wrong format"));
                     }
-                    sqlConnector.execute("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+input[1]+",'"+input[0]+"')");
+                    FirstClass.sqlConnector.execute("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+input[1]+",'"+input[0]+"')");
                     //получем номер
-                    ResultSet resultSet = sqlConnector.getResult("select MAX(ID) as ID from "+SQLConnector.TABLE_SOURCES+" where SAMPLE = '"+input[0]+"'");
+                    ResultSet resultSet = FirstClass.sqlConnector.getResult("select MAX(ID) as ID from "+SQLConnector.TABLE_SOURCES+" where SAMPLE = '"+input[0]+"'");
                     if (resultSet.next()) {
                         String response = String.valueOf(resultSet.getInt("ID"));
                         exchange.sendResponseHeaders(200, response.length());
@@ -101,14 +97,14 @@ class WebServer {
                         stringBuilder.append("'" + word + "'");
                     }
                     stringBuilder.append(")");
-                    ResultSet resultSet = sqlConnector.getResult(stringBuilder.toString());
-                    double[] inputNeuro = new double[neuralNetwork.getInputsCount()];
+                    ResultSet resultSet = FirstClass.sqlConnector.getResult(stringBuilder.toString());
+                    double[] inputNeuro = new double[FirstClass.neuralNetwork.getInputsCount()];
                     while (resultSet.next()) {
                         inputNeuro[resultSet.getInt("ID") - 1] = 1;
                     }
-                    neuralNetwork.setInput(inputNeuro);
-                    neuralNetwork.calculate();
-                    double[] outputNeuro = neuralNetwork.getOutput();
+                    FirstClass.neuralNetwork.setInput(inputNeuro);
+                    FirstClass.neuralNetwork.calculate();
+                    double[] outputNeuro = FirstClass.neuralNetwork.getOutput();
                     StringBuilder response = new StringBuilder();
                     for (int i = 0; i < outputNeuro.length; i++) {
                         response.append(String.valueOf(i + 1)).append(":").append(String.valueOf(outputNeuro[i]));
@@ -128,7 +124,7 @@ class WebServer {
 
                     StringBuilder response = new StringBuilder();
                     String sql = "select * from " + SQLConnector.TABLE_CLASES;
-                    ResultSet resultSet = sqlConnector.getResult(sql);
+                    ResultSet resultSet = FirstClass.sqlConnector.getResult(sql);
                     boolean first = true;
                     while (resultSet.next()) {
                         if (first) {
@@ -173,7 +169,4 @@ class WebServer {
         }
     }
 
-    public void setNeuralNetwork(NeuralNetwork neuralNetwork) {
-        this.neuralNetwork = neuralNetwork;
-    }
 }
