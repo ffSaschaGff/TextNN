@@ -3,16 +3,27 @@ import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.learning.MomentumBackpropagation;
 
 import javax.swing.*;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class FirstClass {
-    static volatile WebServer webServer;
+    private static volatile WebServer webServer;
     private static volatile NeuralNetwork neuralNetwork;
     static volatile SQLConnector sqlConnector;
 
     public static void main(String[] args) {
         JFrame mainFrame = new MainFrame();
+        try {
+            FirstClass.webServer = new WebServer();
+            FirstClass.webServer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void setNnInCalculation(boolean NNinCalc) {
+        webServer.setNnInCalculation(NNinCalc);
     }
 
     static NeuralNetwork getNeuralNetwork() {

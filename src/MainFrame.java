@@ -1,12 +1,18 @@
+import org.h2.store.fs.FileUtils;
 import org.neuroph.core.NeuralNetwork;
+import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
 import org.neuroph.util.TransferFunctionType;
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -18,20 +24,19 @@ class MainFrame extends JFrame {
     private Thread learningThread;
 
     //гуи
-    private JButton learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton, getClassButton;
-    private JPanel nnPanel, saveLoadPanel, sqlPanel, getClassPanel;
+    private JButton loadSqlButton, saveSqlButton, learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton, getClassButton;
+    private JPanel nnPanel, saveLoadPanel, sqlPanel, getClassPanel, secondSqlPanel;
     private JLabel learnInfo;
     private JTextField sampelField;
 
 
 
     MainFrame() {
-        this.setSize(400,300);
+        this.setSize(400,180);
         this.setDefaultCloseOperation(EXIT_ON_CLOSE);
         createGUI();
         createConnector();
         createNN();
-        createWebServer();
 
         this.setVisible(true);
     }
@@ -58,13 +63,23 @@ class MainFrame extends JFrame {
         sqlPanel = new JPanel();
         sqlPanel.setLayout(new BoxLayout(sqlPanel, BoxLayout.X_AXIS));
 
-        loadLearningSetButton = new JButton("Загрузить в БД");
+        loadLearningSetButton = new JButton("Загрузить образцы");
         loadLearningSetButton.addActionListener(new MainFrameActionLisner());
         clearSQLButton = new JButton("Очистить БД");
         clearSQLButton.addActionListener(new MainFrameActionLisner());
         sqlPanel.add(loadLearningSetButton);
         sqlPanel.add(clearSQLButton);
         this.getRootPane().add(sqlPanel);
+
+        secondSqlPanel = new JPanel();
+        secondSqlPanel.setLayout(new BoxLayout(secondSqlPanel, BoxLayout.X_AXIS));
+        saveSqlButton = new JButton("Сохранить БД");
+        loadSqlButton = new JButton("Загрузить БД");
+        saveSqlButton.addActionListener(new MainFrameActionLisner());
+        loadSqlButton.addActionListener(new MainFrameActionLisner());
+        secondSqlPanel.add(saveSqlButton);
+        secondSqlPanel.add(loadSqlButton);
+        this.getRootPane().add(secondSqlPanel);
 
         nnPanel = new JPanel();
         nnPanel.setLayout(new BoxLayout(nnPanel, BoxLayout.X_AXIS));
@@ -82,8 +97,8 @@ class MainFrame extends JFrame {
 
         saveLoadPanel = new JPanel();
         saveLoadPanel.setLayout(new BoxLayout(saveLoadPanel, BoxLayout.X_AXIS));
-        saveButton = new JButton("Сохранить");
-        loadButton = new JButton("Загрузить");
+        saveButton = new JButton("Сохранить НС");
+        loadButton = new JButton("Загрузить НС");
         loadButton.addActionListener(new MainFrameActionLisner());
         saveButton.addActionListener(new MainFrameActionLisner());
         saveLoadPanel.add(saveButton);
@@ -106,15 +121,14 @@ class MainFrame extends JFrame {
         saveLoadPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
         sqlPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
         sqlPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
-    }
+        secondSqlPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
+        secondSqlPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
+        getClassPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
+        getClassPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
 
-    private void createWebServer() {
-        try {
-            FirstClass.webServer = new WebServer();
-            FirstClass.webServer.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.pack();
+
+        this.setResizable(false);
     }
 
     private void createConnector() {
@@ -130,7 +144,19 @@ class MainFrame extends JFrame {
         FirstClass.teachNN();
     }
 
-    private void readAndLoadToSQL(File file) {
+    private void readAndLoadToSQL(File file, boolean raw) {
+        if (raw) {
+            String[] clearSql = {"delete from "+SQLConnector.TABLE_CLASES,
+                                "delete from "+SQLConnector.TABLE_SOURCES,
+                                "delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM,
+                                "delete from "+SQLConnector.TABLE_DICTONARY};
+            try {
+                FirstClass.sqlConnector.execute(clearSql);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
         ArrayList<String> sql = new ArrayList<>();
         try {
 
@@ -138,17 +164,58 @@ class MainFrame extends JFrame {
 
 
             for (String line1 : lines) {
-                String[] line = line1.split(";");
-                if (line.length == 2) {
-                    sql.add("INSERT INTO " + SQLConnector.TABLE_SOURCES + " VALUES (null," + line[1] + ",'" + line[0] + "')");
-                }
+                if (raw) {
+                    if (!line1.equals(""))
+                    sql.add(line1);
+                } else {
 
+                    String[] line = line1.split(";");
+                    if (line.length == 2) {
+                        sql.add("INSERT INTO " + SQLConnector.TABLE_SOURCES + " VALUES (null," + line[1] + ",'" + line[0] + "')");
+                    }
+                }
             }
             FirstClass.sqlConnector.execute(sql);
         } catch (SQLException | IOException e) {
             e.printStackTrace();
         }
     }
+
+    private String saveSQLdata() {
+        StringBuilder stringBuilder = new StringBuilder();
+        try {
+
+            ResultSet resultSet = FirstClass.sqlConnector.getResult("select * from "+SQLConnector.TABLE_CLASES);
+            while (resultSet.next()) {
+                stringBuilder.append("insert into ").append(SQLConnector.TABLE_CLASES).append(" values(")
+                        .append(resultSet.getString("ID")).append(",")
+                        .append("'").append(resultSet.getString("NAME")).append("'").append(")").append(System.lineSeparator());
+            }
+            resultSet = FirstClass.sqlConnector.getResult("select * from "+SQLConnector.TABLE_DICTONARY);
+            while (resultSet.next()) {
+                stringBuilder.append("insert into ").append(SQLConnector.TABLE_DICTONARY).append(" values(")
+                        .append(resultSet.getString("ID")).append(",")
+                        .append("'").append(resultSet.getString("VALUE")).append("'").append(")").append(System.lineSeparator());
+            }
+            resultSet = FirstClass.sqlConnector.getResult("select * from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM);
+            while (resultSet.next()) {
+                stringBuilder.append("insert into ").append(SQLConnector.TABLE_SOURCES_IN_UNIGRAM).append(" values(")
+                        .append(resultSet.getString("TEXT_ID")).append(",")
+                        .append(resultSet.getString("UNIGRAMM_ID")).append(")").append(System.lineSeparator());
+            }
+            resultSet = FirstClass.sqlConnector.getResult("select * from "+SQLConnector.TABLE_SOURCES);
+            while (resultSet.next()) {
+                stringBuilder.append("insert into ").append(SQLConnector.TABLE_SOURCES).append(" values(")
+                        .append(resultSet.getString("ID")).append(",")
+                        .append(resultSet.getString("CLASS_ID")).append(",")
+                        .append("'").append(resultSet.getString("SAMPLE")).append("'").append(")").append(System.lineSeparator());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return stringBuilder.toString();
+    }
+
 
     class MainFrameActionLisner implements ActionListener {
 
@@ -157,7 +224,7 @@ class MainFrame extends JFrame {
             JButton source = (JButton) e.getSource();
             if (source == learnButton) {
                 learningThread = new Thread(() -> {
-                    FirstClass.webServer.setNnInCalculation(true);
+                    FirstClass.setNnInCalculation(true);
                     DictonaryBilder dictonaryBilder = new DictonaryBilder(FirstClass.sqlConnector);
                     try {
                         learnInfo.setText("rebild DB");
@@ -169,7 +236,7 @@ class MainFrame extends JFrame {
                         e1.printStackTrace();
                     } finally {
                         learnInfo.setText("learning stopped");
-                        FirstClass.webServer.setNnInCalculation(false);
+                        FirstClass.setNnInCalculation(false);
                     }
                 });
                 learningThread.start();
@@ -206,7 +273,24 @@ class MainFrame extends JFrame {
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
-                    readAndLoadToSQL(chooser.getSelectedFile());
+                    readAndLoadToSQL(chooser.getSelectedFile(), false);
+                }
+            } else if (source == saveSqlButton) {
+                JFileChooser chooser = new JFileChooser();
+                int ret = chooser.showSaveDialog(null);
+                if (ret == JFileChooser.APPROVE_OPTION) {
+                    String data = saveSQLdata();
+                    try {
+                        Files.write(Paths.get(chooser.getSelectedFile().getAbsolutePath()),data.getBytes(StandardCharsets.UTF_16),StandardOpenOption.CREATE);
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            } else if (source == loadSqlButton) {
+                JFileChooser chooser = new JFileChooser();
+                int ret = chooser.showOpenDialog(null);
+                if (ret == JFileChooser.APPROVE_OPTION) {
+                    readAndLoadToSQL(chooser.getSelectedFile(), true);
                 }
             } else if (source == getClassButton) {
                 try {
