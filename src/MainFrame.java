@@ -1,14 +1,14 @@
-import org.h2.store.fs.FileUtils;
 import org.neuroph.core.NeuralNetwork;
-import org.neuroph.core.data.DataSet;
 import org.neuroph.nnet.MultiLayerPerceptron;
 import org.neuroph.util.TransferFunctionType;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.*;
-import java.nio.charset.Charset;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Set;
 
 class MainFrame extends JFrame {
+
+    public static final String ICON_STR = "/images/icon32x32.png";
+    public static final String APPLICATION_NAME = "TNN";
 
     private Thread learningThread;
 
@@ -33,12 +36,13 @@ class MainFrame extends JFrame {
 
     MainFrame() {
         this.setSize(400,180);
-        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         createGUI();
         createConnector();
         createNN();
 
         this.setVisible(true);
+        this.addWindowListener(new MainFrameWindowsLisner());
     }
 
     private void createNN() {
@@ -127,9 +131,58 @@ class MainFrame extends JFrame {
         getClassPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
 
         this.pack();
+        this.setTitle(APPLICATION_NAME);
+
+        setTrayIcon();
 
         this.setResizable(false);
     }
+
+    private void setMainFrameVisible(boolean visible) {
+        this.setVisible(visible);
+    }
+
+    private void setTrayIcon() {
+        if(! SystemTray.isSupported() ) {
+            return;
+        }
+
+        PopupMenu trayMenu = new PopupMenu();
+        MenuItem item = new MenuItem("Развернуть");
+        item.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                setMainFrameVisible(true);
+            }
+        });
+        trayMenu.add(item);
+
+        item = new MenuItem("Закрыть");
+        item.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        });
+        trayMenu.add(item);
+
+        URL imageURL = FirstClass.class.getResource(ICON_STR);
+
+        Image icon = Toolkit.getDefaultToolkit().getImage(imageURL);
+        TrayIcon trayIcon = new TrayIcon(icon, APPLICATION_NAME, trayMenu);
+        trayIcon.setImageAutoSize(true);
+
+        SystemTray tray = SystemTray.getSystemTray();
+        try {
+            tray.add(trayIcon);
+        } catch (AWTException e) {
+            e.printStackTrace();
+        }
+
+        trayIcon.displayMessage(APPLICATION_NAME, "Application started!",
+                TrayIcon.MessageType.INFO);
+    }
+
 
     private void createConnector() {
         try {
@@ -216,6 +269,43 @@ class MainFrame extends JFrame {
         return stringBuilder.toString();
     }
 
+    class MainFrameWindowsLisner implements WindowListener {
+
+        @Override
+        public void windowOpened(WindowEvent e) {
+
+        }
+
+        @Override
+        public void windowClosing(WindowEvent e) {
+            setMainFrameVisible(false);
+        }
+
+        @Override
+        public void windowClosed(WindowEvent e) {
+
+        }
+
+        @Override
+        public void windowIconified(WindowEvent e) {
+
+        }
+
+        @Override
+        public void windowDeiconified(WindowEvent e) {
+
+        }
+
+        @Override
+        public void windowActivated(WindowEvent e) {
+
+        }
+
+        @Override
+        public void windowDeactivated(WindowEvent e) {
+
+        }
+    }
 
     class MainFrameActionLisner implements ActionListener {
 
