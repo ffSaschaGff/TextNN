@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="neuroph-core-2.92">
     <CLASSES>
-      <root url="jar://$USER_HOME$/Desktop/neuroph-2.92/neuroph-2.92/neuroph-core-2.92.jar!/" />
+      <root url="jar://C:/JavaLibs/neuroph-2.92/neuroph-2.92/neuroph-core-2.92.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

@@ -1,10 +1,12 @@
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.*;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.neuroph.core.NeuralNetwork;
 
+import javax.net.ssl.*;
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.security.KeyStore;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
@@ -12,14 +14,63 @@ import java.util.stream.Collectors;
 
 class WebServer {
 
-    private HttpServer httpServer;
+    private HttpsServer httpServer;
     private volatile boolean nnInCalculation;
 
     WebServer() throws IOException {
         this.nnInCalculation = false;
-        httpServer = HttpServer.create(new InetSocketAddress(8080),0);
-        httpServer.createContext("/api", new WebHandler());
-        httpServer.setExecutor(null);
+        try {
+            // setup the socket address
+            InetSocketAddress address = new InetSocketAddress(8080);
+
+            // initialise the HTTPS server
+            this.httpServer = HttpsServer.create(address, 0);
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+
+            // initialise the keystore
+            char[] password = "password".toCharArray();
+            KeyStore ks = KeyStore.getInstance("JKS");
+            FileInputStream fis = new FileInputStream("src/testkey.jks");
+            ks.load(fis, password);
+
+            // setup the key manager factory
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks, password);
+
+            // setup the trust manager factory
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+            tmf.init(ks);
+
+            // setup the HTTPS context and parameters
+            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+            this.httpServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+                public void configure(HttpsParameters params) {
+                    try {
+                        // initialise the SSL context
+                        SSLContext c = SSLContext.getDefault();
+                        SSLEngine engine = c.createSSLEngine();
+                        params.setNeedClientAuth(false);
+                        params.setCipherSuites(engine.getEnabledCipherSuites());
+                        params.setProtocols(engine.getEnabledProtocols());
+
+                        // get the default parameters
+                        SSLParameters defaultSSLParameters = c.getDefaultSSLParameters();
+                        params.setSSLParameters(defaultSSLParameters);
+
+                    } catch (Exception ex) {
+                        System.out.println("Failed to create HTTPS port");
+                    }
+                }
+            });
+            this.httpServer.createContext("/api", new WebHandler());
+            this.httpServer.setExecutor(null); // creates a default executor
+
+        } catch (Exception exception) {
+            System.out.println("Failed to create HTTPS server on port " + 8080 + " of localhost");
+            exception.printStackTrace();
+
+        }
+
     }
 
     void setNnInCalculation(boolean nnInCalculation) {
@@ -43,7 +94,7 @@ class WebServer {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
 
-             String raw =  new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
+            String raw =  new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
                     .lines().collect(Collectors.joining("\n")).replace('\'','\"');
             String[] input = raw.split("\n");
             String url = exchange.getRequestURI().toString();
@@ -67,11 +118,15 @@ class WebServer {
                     //получем номер
                     ResultSet resultSet = FirstClass.sqlConnector.getResult("select MAX(ID) as ID from "+SQLConnector.TABLE_SOURCES+" where SAMPLE = '"+input[0]+"'");
                     if (resultSet.next()) {
-                        String response = String.valueOf(resultSet.getInt("ID"));
+                        JSONObject object = new JSONObject();
+                        object.put("id", String.valueOf(resultSet.getInt("ID")));
+                        String response = object.toJSONString();
                         exchange.sendResponseHeaders(200, response.length());
                         OutputStream os = exchange.getResponseBody();
                         os.write(response.getBytes());
                         os.close();
+                    } else {
+                        send400err(exchange, null);
                     }
                 } catch (SQLException e) {
                     send400err(exchange, e);
@@ -106,61 +161,64 @@ class WebServer {
                     neuralNetwork.setInput(inputNeuro);
                     neuralNetwork.calculate();
                     double[] outputNeuro = neuralNetwork.getOutput();
-                    StringBuilder response = new StringBuilder();
+
+                    JSONObject object = new JSONObject();
+                    JSONArray array = new JSONArray();
                     for (int i = 0; i < outputNeuro.length; i++) {
-                        response.append(String.valueOf(i + 1)).append(":").append(String.valueOf(outputNeuro[i]));
-                        if (i != outputNeuro.length - 1) {
-                            response.append(System.lineSeparator());
-                        }
+                        JSONObject oneClass = new JSONObject();
+                        oneClass.put("id",String.valueOf(i + 1));
+                        oneClass.put("value",String.valueOf(outputNeuro[i]));
+                        array.add(oneClass);
                     }
-                    exchange.sendResponseHeaders(200, response.toString().length());
+                    object.put("classes", array);
+                    String response = object.toJSONString();
+                    exchange.sendResponseHeaders(200, response.length());
                     OutputStream os = exchange.getResponseBody();
-                    os.write(response.toString().getBytes());
+                    os.write(response.getBytes());
                     os.close();
                 } catch (SQLException e) {
+                    e.printStackTrace();
                     send400err(exchange, e);
                 }
-            } else if (url.equals("/api/getClasesName")) {
+            } else if (url.equals("/api/getClassesName")) {
                 try {
-
-                    StringBuilder response = new StringBuilder();
+                    JSONObject object = new JSONObject();
+                    JSONArray array = new JSONArray();
                     String sql = "select * from " + SQLConnector.TABLE_CLASES;
                     ResultSet resultSet = FirstClass.sqlConnector.getResult(sql);
-                    boolean first = true;
                     while (resultSet.next()) {
-                        if (first) {
-                            first = false;
-                        } else {
-                            response.append(System.lineSeparator());
-                        }
-                        response.append(resultSet.getString("ID")).append(":").append(resultSet.getString("NAME"));
-
+                        JSONObject oneClass = new JSONObject();
+                        oneClass.put("id",resultSet.getString("ID"));
+                        oneClass.put("name",resultSet.getString("NAME"));
+                        array.add(oneClass);
                     }
-                    exchange.sendResponseHeaders(200, response.toString().length());
+                    object.put("classes", array);
+                    String response = object.toJSONString();
+                    exchange.sendResponseHeaders(200, response.length());
                     OutputStream os = exchange.getResponseBody();
-                    os.write(response.toString().getBytes());
+                    os.write(response.getBytes());
                     os.close();
 
                 } catch (SQLException e) {
+                    e.printStackTrace();
                     send400err(exchange, e);
                 }
             } else {
-                String response = "Неверный запрос к api";
-                exchange.sendResponseHeaders(404, response.length());
-                OutputStream os = exchange.getResponseBody();
-                os.write(response.getBytes());
-                os.close();
+                send400err(exchange, new Exception("Неверный запрос к api"));
             }
         }
     }
 
     private void send400err(HttpExchange exchange, Exception e) {
         try {
-            String response = "";
+            JSONObject object = new JSONObject();
             if (e == null) {
                 e.printStackTrace();
-                response = e.getMessage();
+                object.put("error", e.getMessage());
+            } else {
+                object.put("error", "unknowError");
             }
+            String response = object.toJSONString();
             exchange.sendResponseHeaders(400, response.length());
             OutputStream os = exchange.getResponseBody();
             os.write(response.getBytes());
