@@ -27,10 +27,10 @@ class MainFrame extends JFrame {
     private Thread learningThread;
 
     //гуи
-    private JButton loadSqlButton, saveSqlButton, learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton, getClassButton;
-    private JPanel nnPanel, saveLoadPanel, sqlPanel, getClassPanel, secondSqlPanel;
+    private JButton loadSqlButton, saveSqlButton, learnButton, stopLearnButton, saveButton, loadButton, clearSQLButton, loadLearningSetButton, getClassButton, getNewTokenButton;
+    private JPanel nnPanel, saveLoadPanel, sqlPanel, getClassPanel, secondSqlPanel, tokenPanel;
     private JLabel learnInfo;
-    private JTextField sampelField;
+    private JTextField sampelField, tokenField;
 
 
 
@@ -74,7 +74,6 @@ class MainFrame extends JFrame {
         sqlPanel.add(loadLearningSetButton);
         sqlPanel.add(clearSQLButton);
         this.getRootPane().add(sqlPanel);
-
         secondSqlPanel = new JPanel();
         secondSqlPanel.setLayout(new BoxLayout(secondSqlPanel, BoxLayout.X_AXIS));
         saveSqlButton = new JButton("Сохранить БД");
@@ -83,6 +82,7 @@ class MainFrame extends JFrame {
         loadSqlButton.addActionListener(new MainFrameActionLisner());
         secondSqlPanel.add(saveSqlButton);
         secondSqlPanel.add(loadSqlButton);
+
         this.getRootPane().add(secondSqlPanel);
 
         nnPanel = new JPanel();
@@ -118,7 +118,18 @@ class MainFrame extends JFrame {
         getClassPanel.add(getClassButton);
         this.getRootPane().add(getClassPanel);
 
+        tokenPanel = new JPanel();
+        tokenPanel.setLayout(new BoxLayout(tokenPanel, BoxLayout.X_AXIS));
+        tokenField = new JTextField("XXXXXXXXXX");
+        tokenPanel.add(tokenField);
+        getNewTokenButton = new JButton("Новый токен");
+        getNewTokenButton.addActionListener(new MainFrameActionLisner());
+        tokenPanel.add(getNewTokenButton);
+        this.getRootPane().add(tokenPanel);
+
         this.getRootPane().setAlignmentY(JFrame.TOP_ALIGNMENT);
+        tokenPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
+        tokenPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
         nnPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
         nnPanel.setAlignmentY(JFrame.TOP_ALIGNMENT);
         saveLoadPanel.setAlignmentX(JFrame.LEFT_ALIGNMENT);
@@ -417,6 +428,14 @@ class MainFrame extends JFrame {
                         }
                     }
                     JOptionPane.showMessageDialog(null, response.toString());
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+            } else if (source == getNewTokenButton) {
+                String token = SecureTokenGenerator.nextToken();
+                try {
+                    FirstClass.sqlConnector.execute("insert into "+SQLConnector.TABLE_TOKENS+" values('"+token+"')");
+                    tokenField.setText(token);
                 } catch (SQLException e1) {
                     e1.printStackTrace();
                 }

@@ -7,6 +7,7 @@ public class SQLConnector {
     public static final String TABLE_CLASES = "CLASES";
     public static final String TABLE_SOURCES = "SOURCES";
     public static final String TABLE_SOURCES_IN_UNIGRAM = "SOURCES_IN_UNIGRAMM";
+    public static final String TABLE_TOKENS = "TOKENS";
     public static final int COUNT_OF_CLASES = 2;
 
     public SQLConnector() throws SQLException {
@@ -15,11 +16,12 @@ public class SQLConnector {
     }
 
     public void initSQL() throws SQLException {
-        String[] sql = new String[4];
+        String[] sql = new String[5];
         sql[0] = "CREATE TABLE IF NOT EXISTS "+TABLE_DICTONARY+"(ID INT AUTO_INCREMENT PRIMARY KEY, VALUE varchar(255));";
         sql[1] = "CREATE TABLE IF NOT EXISTS "+TABLE_CLASES+"(ID INT AUTO_INCREMENT PRIMARY KEY, NAME varchar(255));";
         sql[2] = "CREATE TABLE IF NOT EXISTS "+TABLE_SOURCES+"(ID INT AUTO_INCREMENT PRIMARY KEY, CLASS_ID int, SAMPLE text);";
         sql[3] = "CREATE TABLE IF NOT EXISTS "+TABLE_SOURCES_IN_UNIGRAM+"(TEXT_ID int, UNIGRAMM_ID int);";
+        sql[4] = "CREATE TABLE IF NOT EXISTS "+TABLE_TOKENS+"(TOKEN varchar(255));";
 
         this.execute(sql);
     }

@@ -93,11 +93,26 @@ class WebServer {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
+            try {
+                if (auth == null) {
+                    send401(exchange);
+                } else {
+                    String[] subAuth = auth.split(" ");
+                    ResultSet resultSet = FirstClass.sqlConnector.getResult("select * from " + SQLConnector.TABLE_TOKENS + " where token = '" + subAuth[subAuth.length - 1]+"'");
+                    if (!resultSet.next()) {
+                        send401(exchange);
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
 
             String raw =  new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
                     .lines().collect(Collectors.joining("\n")).replace('\'','\"');
             String[] input = raw.split("\n");
             String url = exchange.getRequestURI().toString();
+
             if (isNnInCalculation()) {
                 send400err(exchange, new Exception("Расчет нейросети в процессе"));
             }else if (url.equals("/api/test")) {
@@ -220,6 +235,18 @@ class WebServer {
             }
             String response = object.toJSONString();
             exchange.sendResponseHeaders(400, response.length());
+            OutputStream os = exchange.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+
+    private void send401(HttpExchange exchange) {
+        try {
+            String response = "";
+            exchange.sendResponseHeaders(401, response.length());
             OutputStream os = exchange.getResponseBody();
             os.write(response.getBytes());
             os.close();
