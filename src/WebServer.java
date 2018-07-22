@@ -86,7 +86,9 @@ class WebServer {
     }
 
     void stop() {
-        httpServer.stop(0);
+        if (httpServer != null) {
+            httpServer.stop(0);
+        }
     }
 
     class WebHandler implements HttpHandler {

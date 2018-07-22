@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="MainFrameController">
+   <children>
+      <MenuBar>
+        <menus>
+          <Menu mnemonicParsing="false" text="БД">
+            <items>
+              <MenuItem id="LoadBD" mnemonicParsing="false" onAction="#LoadBD_OnAction" text="Загрузить" />
+                  <MenuItem id="SaveBD" mnemonicParsing="false" onAction="#SaveBD_OnAction" text="Сохранить" />
+                  <MenuItem id="ClearBD" mnemonicParsing="false" onAction="#ClearBD_OnAction" text="Очистить" />
+                  <MenuItem id="LoadLearningSet" mnemonicParsing="false" onAction="#LoadLearningSet_OnAction" text="Загрузить на обучение..." />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Нейросеть">
+            <items>
+                  <MenuItem mnemonicParsing="false" onAction="#LoadNN_OnAction" text="Загрузить" />
+                  <MenuItem id="SaveNN" mnemonicParsing="false" onAction="#SaveNN_OnAction" text="Сохранить" />
+              <MenuItem id="TeachNN" mnemonicParsing="false" onAction="#TeachNN_OnAction" text="Обучить" />
+                  <MenuItem id="StopTeaching" mnemonicParsing="false" onAction="#StopTeaching_OnAction" text="Остановить" />
+            </items>
+          </Menu>
+            <Menu mnemonicParsing="false" text="Токены">
+              <items>
+                <MenuItem mnemonicParsing="false" onAction="#GetNewToken_OnAction" text="Новы токен" />
+              </items>
+            </Menu>
+        </menus>
+      </MenuBar>
+      <HBox prefHeight="100.0" prefWidth="200.0">
+         <children>
+            <TextArea id="SampleField" prefHeight="200.0" prefWidth="200.0" wrapText="true" />
+            <Button id="GetClass" mnemonicParsing="false" onAction="#GetClass_OnAction" text="Получить класс" />
+         </children>
+      </HBox>
+   </children>
+</VBox>

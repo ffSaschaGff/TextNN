@@ -67,17 +67,17 @@ class MainFrame extends JFrame {
         sqlPanel = new JPanel();
         sqlPanel.setLayout(new BoxLayout(sqlPanel, BoxLayout.X_AXIS));
 
-        loadLearningSetButton = new JButton("Загрузить образцы");
+        loadLearningSetButton = new JButton("Загрузить образцы"); //(+)
         loadLearningSetButton.addActionListener(new MainFrameActionLisner());
-        clearSQLButton = new JButton("Очистить БД");
+        clearSQLButton = new JButton("Очистить БД"); //(+)
         clearSQLButton.addActionListener(new MainFrameActionLisner());
         sqlPanel.add(loadLearningSetButton);
         sqlPanel.add(clearSQLButton);
         this.getRootPane().add(sqlPanel);
         secondSqlPanel = new JPanel();
         secondSqlPanel.setLayout(new BoxLayout(secondSqlPanel, BoxLayout.X_AXIS));
-        saveSqlButton = new JButton("Сохранить БД");
-        loadSqlButton = new JButton("Загрузить БД");
+        saveSqlButton = new JButton("Сохранить БД"); //(+)
+        loadSqlButton = new JButton("Загрузить БД"); //(+)
         saveSqlButton.addActionListener(new MainFrameActionLisner());
         loadSqlButton.addActionListener(new MainFrameActionLisner());
         secondSqlPanel.add(saveSqlButton);
@@ -88,9 +88,9 @@ class MainFrame extends JFrame {
         nnPanel = new JPanel();
         nnPanel.setLayout(new BoxLayout(nnPanel, BoxLayout.X_AXIS));
 
-        learnButton = new JButton("Обучить");
+        learnButton = new JButton("Обучить"); //(+)
         learnButton.addActionListener(new MainFrameActionLisner());
-        stopLearnButton = new JButton("Остановить");
+        stopLearnButton = new JButton("Остановить"); //(+)
         stopLearnButton.addActionListener(new MainFrameActionLisner());
         learnInfo = new JLabel("");
 
@@ -101,8 +101,8 @@ class MainFrame extends JFrame {
 
         saveLoadPanel = new JPanel();
         saveLoadPanel.setLayout(new BoxLayout(saveLoadPanel, BoxLayout.X_AXIS));
-        saveButton = new JButton("Сохранить НС");
-        loadButton = new JButton("Загрузить НС");
+        saveButton = new JButton("Сохранить НС"); //(+)
+        loadButton = new JButton("Загрузить НС"); //(+)
         loadButton.addActionListener(new MainFrameActionLisner());
         saveButton.addActionListener(new MainFrameActionLisner());
         saveLoadPanel.add(saveButton);
@@ -122,7 +122,7 @@ class MainFrame extends JFrame {
         tokenPanel.setLayout(new BoxLayout(tokenPanel, BoxLayout.X_AXIS));
         tokenField = new JTextField("XXXXXXXXXX");
         tokenPanel.add(tokenField);
-        getNewTokenButton = new JButton("Новый токен");
+        getNewTokenButton = new JButton("Новый токен"); //(+)
         getNewTokenButton.addActionListener(new MainFrameActionLisner());
         tokenPanel.add(getNewTokenButton);
         this.getRootPane().add(tokenPanel);
@@ -190,8 +190,8 @@ class MainFrame extends JFrame {
             e.printStackTrace();
         }
 
-        trayIcon.displayMessage(APPLICATION_NAME, "Application started!",
-                TrayIcon.MessageType.INFO);
+        //trayIcon.displayMessage(APPLICATION_NAME, "Application started!",
+        //        TrayIcon.MessageType.INFO);
     }
 
 
@@ -323,7 +323,7 @@ class MainFrame extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
             JButton source = (JButton) e.getSource();
-            if (source == learnButton) {
+            if (source == learnButton) { //(+)
                 learningThread = new Thread(() -> {
                     FirstClass.setNnInCalculation(true);
                     DictonaryBilder dictonaryBilder = new DictonaryBilder(FirstClass.sqlConnector);
@@ -341,16 +341,16 @@ class MainFrame extends JFrame {
                     }
                 });
                 learningThread.start();
-            } else if (source == stopLearnButton) {
+            } else if (source == stopLearnButton) { //(+)
                 FirstClass.stopLearning();
                 learnInfo.setText("learning stopped");
-            } else if (source == saveButton) {
+            } else if (source == saveButton) { //(+)
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showSaveDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     FirstClass.getNeuralNetwork().save(chooser.getSelectedFile().getAbsolutePath());
                 }
-            } else if (source == loadButton) {
+            } else if (source == loadButton) { //(+)
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
@@ -360,7 +360,7 @@ class MainFrame extends JFrame {
                         e1.printStackTrace();
                     }
                 }
-            } else if (source == clearSQLButton) {
+            } else if (source == clearSQLButton) { //(+)
                 String[] sql = {"delete from "+SQLConnector.TABLE_DICTONARY,
                                 "delete from "+SQLConnector.TABLE_SOURCES,
                                 "delete from "+SQLConnector.TABLE_SOURCES_IN_UNIGRAM};//,
@@ -370,13 +370,13 @@ class MainFrame extends JFrame {
                 } catch (SQLException e1) {
                     e1.printStackTrace();
                 }
-            } else if (source == loadLearningSetButton) {
+            } else if (source == loadLearningSetButton) { //(+)
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
                     readAndLoadToSQL(chooser.getSelectedFile(), false);
                 }
-            } else if (source == saveSqlButton) {
+            } else if (source == saveSqlButton) { //(+)
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showSaveDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
@@ -387,7 +387,7 @@ class MainFrame extends JFrame {
                         e1.printStackTrace();
                     }
                 }
-            } else if (source == loadSqlButton) {
+            } else if (source == loadSqlButton) { //(+)
                 JFileChooser chooser = new JFileChooser();
                 int ret = chooser.showOpenDialog(null);
                 if (ret == JFileChooser.APPROVE_OPTION) {
