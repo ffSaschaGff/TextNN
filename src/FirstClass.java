@@ -102,7 +102,7 @@ public class FirstClass {
         }
     }
 
-    public static void startLearninig() {
+    public static synchronized void startLearninig() {
         FirstClass.learningThread = new Thread(() -> {
         FirstClass.setNnInCalculation(true);
         DictonaryBilder dictonaryBilder = new DictonaryBilder(FirstClass.sqlConnector);
@@ -251,6 +251,28 @@ public class FirstClass {
         } catch (SQLException e1) {
             e1.printStackTrace();
             return e1.getMessage();
+        }
+    }
+
+    public static String[] getTokensArray() throws SQLException {
+        ResultSet resultSet = sqlConnector.getResult("select * from "+SQLConnector.TABLE_TOKENS);
+        ArrayList<String> tokensList = new ArrayList<String>();
+        while (resultSet.next()) {
+            tokensList.add(resultSet.getString("TOKEN"));
+        }
+        String[] result = new String[tokensList.size()];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = tokensList.get(i);
+        }
+        return result;
+    }
+
+    public static void getNewToken() {
+        String token = SecureTokenGenerator.nextToken();
+        try {
+            FirstClass.sqlConnector.execute("insert into "+SQLConnector.TABLE_TOKENS+" values('"+token+"')");
+        } catch (SQLException e1) {
+            e1.printStackTrace();
         }
     }
 }

@@ -4,6 +4,8 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -31,6 +33,7 @@
             <Menu mnemonicParsing="false" text="Токены">
               <items>
                 <MenuItem mnemonicParsing="false" onAction="#GetNewToken_OnAction" text="Новы токен" />
+                  <MenuItem mnemonicParsing="false" onAction="#RefreshTokenTable_OnAction" text="Обновить" />
               </items>
             </Menu>
         </menus>
@@ -41,5 +44,10 @@
             <Button id="GetClass" mnemonicParsing="false" onAction="#GetClass_OnAction" text="Получить класс" />
          </children>
       </HBox>
+      <TableView fx:id="tokenTable" editable="true" prefHeight="200.0" prefWidth="200.0">
+        <columns>
+          <TableColumn fx:id="tokenColumn" maxWidth="1.7976931348623157E308" minWidth="300.0" prefWidth="0.0" text="Токен" />
+        </columns>
+      </TableView>
    </children>
 </VBox>
