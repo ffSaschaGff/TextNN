@@ -36,6 +36,11 @@
                   <MenuItem mnemonicParsing="false" onAction="#RefreshTokenTable_OnAction" text="Обновить" />
               </items>
             </Menu>
+            <Menu mnemonicParsing="false" onAction="#Help_OnAction" text="Справка">
+              <items>
+                <MenuItem mnemonicParsing="false" text="Справка" />
+              </items>
+            </Menu>
         </menus>
       </MenuBar>
       <HBox prefHeight="100.0" prefWidth="200.0">

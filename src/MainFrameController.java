@@ -8,9 +8,13 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.stage.FileChooser;
 import org.neuroph.core.NeuralNetwork;
 
+import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class MainFrameController {
     @FXML
@@ -120,5 +124,16 @@ public class MainFrameController {
 
         // Добавление в таблицу данных из наблюдаемого списка
         tokenTable.setItems(mainApp.getTokenData());
+    }
+
+    public void Help_OnAction(ActionEvent actionEvent) {
+        if (Desktop.isDesktopSupported()) {
+            File htmlFile = new File("src/help.html");
+            try {
+                Desktop.getDesktop().browse(htmlFile.toURI());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

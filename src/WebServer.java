@@ -1,6 +1,8 @@
 import com.sun.net.httpserver.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.neuroph.core.NeuralNetwork;
 
 import javax.net.ssl.*;
@@ -104,6 +106,7 @@ class WebServer {
                     ResultSet resultSet = FirstClass.sqlConnector.getResult("select * from " + SQLConnector.TABLE_TOKENS + " where token = '" + subAuth[subAuth.length - 1]+"'");
                     if (!resultSet.next()) {
                         send401(exchange);
+                        return;
                     }
                 }
             } catch (SQLException e) {
@@ -112,8 +115,15 @@ class WebServer {
 
             String raw =  new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
                     .lines().collect(Collectors.joining("\n")).replace('\'','\"');
-            String[] input = raw.split("\n");
+            //String[] input = raw.split("\n");
             String url = exchange.getRequestURI().toString();
+            JSONParser parser = new JSONParser();
+            JSONObject jsonObject = null;
+            try {
+                jsonObject = (JSONObject) parser.parse(raw);
+            } catch (ParseException e) {
+                send400err(exchange, new Exception("parse exception"));
+            }
 
             if (isNnInCalculation()) {
                 send400err(exchange, new Exception("Расчет нейросети в процессе"));
@@ -128,12 +138,14 @@ class WebServer {
                 //добавляем пример
                 try {
                     //добавляем
-                    if (input.length != 2) {
-                        send400err(exchange, new Exception("wrong format"));
+                    if (!jsonObject.containsKey("sample") || !jsonObject.containsKey("class")) {
+                        send400err(exchange, new Exception("parse exception"));
+                        return;
                     }
-                    FirstClass.sqlConnector.execute("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+input[1]+",'"+input[0]+"')");
+
+                    FirstClass.sqlConnector.execute("INSERT INTO "+SQLConnector.TABLE_SOURCES+" VALUES (null,"+(String) jsonObject.get("class")+",'"+(String) jsonObject.get("sample")+"')");
                     //получем номер
-                    ResultSet resultSet = FirstClass.sqlConnector.getResult("select MAX(ID) as ID from "+SQLConnector.TABLE_SOURCES+" where SAMPLE = '"+input[0]+"'");
+                    ResultSet resultSet = FirstClass.sqlConnector.getResult("select MAX(ID) as ID from "+SQLConnector.TABLE_SOURCES+" where SAMPLE = '"+(String) jsonObject.get("sample")+"'");
                     if (resultSet.next()) {
                         JSONObject object = new JSONObject();
                         object.put("id", String.valueOf(resultSet.getInt("ID")));
@@ -151,13 +163,14 @@ class WebServer {
 
 
             } else if(url.equals("/api/getClass")) {
-                if (input.length != 1) {
-                    send400err(exchange, new Exception("wrong format"));
+                if (!jsonObject.containsKey("sample")) {
+                    send400err(exchange, new Exception("parse exception"));
+                    return;
                 }
                 try {
                     StringBuilder stringBuilder = new StringBuilder();
                     Unigramm unigramm = new Unigramm();
-                    Set<String> wordsSet = unigramm.getNGram((String) input[0]);
+                    Set<String> wordsSet = unigramm.getNGram((String) (String) jsonObject.get("sample"));
                     stringBuilder.append("select ID from " + SQLConnector.TABLE_DICTONARY + " where VALUE in (");
                     boolean isFirst = true;
                     for (String word : wordsSet) {
